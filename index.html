@@ -7,6 +7,8 @@
 
   <!-- Google Search Script (loads once) -->
   <script async src="https://cse.google.com/cse.js?cx=e034be13cfdca4837"></script> 
+  <script src="https://www.gstatic.com/cloud-search/static/cse/v1/prod/cse.js?h=..."></script> <!-- Optional for enhanced UI -->
+  
   <style>
     body{font-family:'Georgia',serif;background:#ffeef8;color:#ff6bc1;margin:0;padding:20px;text-align:center;}
     h1{font-size:3em;margin:30px 0;color:#ff1493;}
@@ -55,6 +57,14 @@
     <div class="gcse-searchbox-only" data-resultsUrl="https://katelynscampusqueens.github.io/search.html"></div>
   </div>
 
+<!-- ♡ Visual Search: Upload Photo ♡ -->
+  <div id="visual-search">
+    <h3>♡ Snap or Upload a Photo to Search ♡</h3>
+    <input type="file" id="file-input" accept="image/*" onchange="handleImageUpload(event)">
+    <button id="upload-btn" onclick="document.getElementById('file-input').click()">📸 Upload Pink Inspo!</button>
+    <div id="results"></div>
+  </div>  
+  
   <div class="grid">
     <div class="card"><a href="katelyn_app.html">CampusKit Student App</a><p>Schedule, mood tracker, to-do & more</p></div>
     <div class="card"><a href="TestSite.html">Girl Games Hub</a><p>Chess Blackjack Tic-Tac-Toe</p></div>
@@ -63,8 +73,84 @@
   </div>
 
   <footer>Made with ♡ by Katelyn • Class of 2028</footer>
+
+  <script>
+    // Replace with your Google API Key
+    const API_KEY = 'YOUR_GOOGLE_API_KEY_HERE'; // From Step 1
+    const CX = 'e034be13cfdca4837'; // Your search engine ID
+
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      // Step 1: Analyze image with Vision API
+      const visionResponse = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          requests: [{
+            image: { content: await fileToBase64(file) },
+            features: [{ type: 'LABEL_DETECTION', maxResults: 5 }]
+          }]
+        })
+      });
+      const visionData = await visionResponse.json();
+      const labels = visionData.responses[0].labelAnnotations.map(label => label.description).join(' ');
+
+      // Step 2: Search site with extracted text
+      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${API_KEY}&cx=${CX}&q=${encodeURIComponent(labels)}&searchType=image`;
+      const searchResponse = await fetch(searchUrl);
+      const searchData = await searchResponse.json();
+
+      // Step 3: Display results
+      displayResults(searchData.items || []);
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+      });
+    }
+
+    function displayResults(items) {
+      const resultsDiv = document.getElementById('results');
+      if (items.length === 0) {
+        resultsDiv.innerHTML = '<p>No pink matches found! Try another photo ♡</p>';
+        return;
+      }
+      resultsDiv.innerHTML = items.map(item => 
+        `<div class="result-item">
+          <img src="${item.image.thumbnailLink}" alt="${item.title}" style="width:100px; border-radius:10px;">
+          <a href="${item.link}">${item.title}</a><p>${item.snippet}</p>
+        </div>`
+      ).join('');
+    } 
+  </script>
+</body>
+</html>  
 </body>
 </html> 
+
+<button onclick="reverseImageSearch()">🔍 Reverse Search This Image</button>
+<input type="file" id="tineye-input" accept="image/*" style="display:none;" onchange="uploadToTinEye(event)">
+<script>
+function reverseImageSearch() {
+  document.getElementById('tineye-input').click();
+}
+function uploadToTinEye(event) {
+  const file = event.target.files[0];
+  if (file) {
+    const form = new FormData();
+    form.append('image', file);
+    window.open('https://tineye.com/search', '_blank'); // Or integrate via their API if you sign up (free tier)
+    // For full integration: Use TinEye API (free for 10 searches/day)
+  }
+}
+</script>
 <style>
     body{font-family:'Georgia',serif;background:#ffeef8;color:#ff6bc1;margin:0;padding:20px;text-align:center;}
     h1{font-size:3em;margin:30px 0;color:#ff1493;}
